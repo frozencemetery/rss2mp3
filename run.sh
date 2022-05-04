@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 # SPDX-License_identifier: AGPL-3.0-only
 
 if [ x"$CC" = x ]; then
@@ -18,3 +18,4 @@ LDFLAGS="-Wl,-z,relro $LDFLAGS"
 
 set -x
 $CC -std=c11 -Wall -Wextra -Werror $CPPFLAGS $CFLAGS $LDFLAGS -o main main.c
+exec ./main
