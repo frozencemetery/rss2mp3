@@ -26,32 +26,36 @@ int main() {
 
     /* Disable canonical mode, etc. so we don't wait for newlines. */
     if (tcgetattr(0, &t)) {
-	printf("tcgetattr: %m\n");
-	exit(1);
+        printf("tcgetattr: %m\n");
+        exit(1);
     }
     t.c_lflag &= ~ICANON;
     t.c_cc[VMIN] = 1;
     t.c_cc[VTIME] = 0;
     if (tcsetattr(0, TCSANOW, &t)) {
-	printf("tcsetattr: %m\n");
-	exit(1);
+        printf("tcsetattr: %m\n");
+        exit(1);
     }
 
     while (1) {
-	printf("[h for help] ");
-	fflush(stdout);
+        printf("[h for help] ");
+        fflush(stdout);
 
-	cmd = getchar();
-	printf("\n");
-	if (cmd == '\0' || cmd == 'q') {
-	    die();
-	} else if (cmd == 'h') {
-	    help();
-	} else {
-	    printf("command not recognized! Valid commands:\n");
-	    help();
-	}
+        cmd = getchar();
+        printf("\n");
+        if (cmd == '\0' || cmd == 'q') {
+            die();
+        } else if (cmd == 'h') {
+            help();
+        } else {
+            printf("command not recognized! Valid commands:\n");
+            help();
+        }
     }
 
     die();
 }
+/* Local variables: */
+/* c-basic-offset: 4 */
+/* indent-tabs-mode: nil */
+/* End: */

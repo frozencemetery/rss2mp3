@@ -13,9 +13,10 @@ if [ x"$CC" = x ]; then
 fi
 
 CFLAGS="-O2 -fstack-protector-strong -Wformat -Werror=format-security $CFLAGS"
-CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2 $CFLAGS"
+CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2 $CPPFLAGS"
 LDFLAGS="-Wl,-z,relro $LDFLAGS"
 
 set -x
-$CC -std=c11 -Wall -Wextra -Werror $CPPFLAGS $CFLAGS $LDFLAGS -o main main.c
+$CC -std=c11 -Wall -Wextra -Werror -g $CPPFLAGS $CFLAGS $LDFLAGS \
+    -o main main.c
 exec ./main
