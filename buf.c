@@ -2,9 +2,12 @@
 
 #include "buf.h"
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define INCREMENT 128
 
@@ -49,6 +52,22 @@ void free_buf(buf **bp) {
     free((*bp)->bytes);
     free(*bp);
     *bp = NULL;
+}
+
+void flush_to_file(buf *b, const char *path) {
+    ssize_t ret;
+    int fd;
+
+    fd = open(path, O_CREAT | O_WRONLY, 0600);
+    if (fd == -1) {
+	DIE;
+    }
+
+    ret = write(fd, b->bytes, b->bytes_written);
+    if (ret != (ssize_t)b->bytes_written) {
+	DIE;
+    }
+    close(fd);
 }
 
 void append_bytes(buf *b, const char *data, size_t data_len) {

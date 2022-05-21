@@ -1,5 +1,8 @@
 /* SPDX-License_identifier: AGPL-3.0-only */
 
+/* For getline(). */
+#define _POSIX_C_SOURCE 200809L
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +13,8 @@
 #include <unistd.h>
 
 #include "buf.h"
+
+#define CONFIG_FILE ".podcasts"
 
 struct termios t;
 
@@ -24,6 +29,7 @@ _Noreturn void die(void) {
 
 void help(void) {
     printf("- h: help (this text)\n");
+    printf("- a: add a feed\n");
     printf("- l: list feeds\n");
     printf("- q: quit\n");
 }
@@ -46,7 +52,7 @@ buf *load_config(void) {
         die();
     }
 
-    fd = open(".podcasts", O_CREAT | O_RDONLY, 0600);
+    fd = open(CONFIG_FILE, O_CREAT | O_RDONLY, 0600);
     if (fd == -1) {
         printf("TODO open %m\n");
         die();
@@ -68,10 +74,11 @@ buf *load_config(void) {
 }
 
 int main() {
-    char cmd;
+    char cmd, *name, *url;
     const char *line;
     buf *config = NULL;
-    size_t line_len;
+    size_t line_len, discard;
+    ssize_t name_len, url_len;
 
     /* Disable canonical mode, etc. so we don't wait for newlines. */
     if (tcgetattr(0, &t)) {
@@ -96,6 +103,50 @@ int main() {
             die();
         } else if (cmd == 'h') {
             help();
+        } else if (cmd == 'a') {
+            if (config == NULL) {
+                config = load_config();
+            }
+
+            printf("Feed name: ");
+            fflush(stdout);
+
+            name = NULL;
+            discard = 0;
+            name_len = getline(&name, &discard, stdin);
+            if (name_len < 0) {
+                printf("TODO getline %m\n");
+                die();
+            } else if (name_len == 0) {
+                printf("TODO you're bad at this\n");
+                die();
+            }
+
+            printf("URL: ");
+            fflush(stdout);
+
+            url = NULL;
+            discard = 0;
+            url_len = getline(&url, &discard, stdin);
+            if (url_len < 0) {
+                printf("TODO getline %m\n");
+                die();
+            } else if (url_len == 0) {
+                printf("TODO you're bad at this\n");
+                die();
+            } else if (url_len < 12 || /* http://a is valid... but no. */
+                       (strcmp(url, "https://") && strcmp(url, "http://"))) {
+                printf("TODO invalid URL\n");
+                die();
+            }
+
+            append_bytes(config, "n: ", 3);
+            append_bytes(config, name, name_len);
+            append_bytes(config, "u: ", 3);
+            append_bytes(config, url, url_len);
+            free(name);
+            free(url);
+            flush_to_file(config, CONFIG_FILE);
         } else if (cmd == 'l') {
             if (config == NULL) {
                 config = load_config();
