@@ -18,5 +18,5 @@ LDFLAGS="-Wl,-z,relro $LDFLAGS"
 
 set -x
 $CC -std=c11 -Wall -Wextra -Werror -g $CPPFLAGS $CFLAGS $LDFLAGS \
-    -o main main.c
+    -o main main.c buf.c
 exec ./main

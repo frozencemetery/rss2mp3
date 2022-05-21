@@ -9,6 +9,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "buf.h"
+
 struct termios t;
 
 _Noreturn void die(void) {
@@ -26,10 +28,13 @@ void help(void) {
     printf("- q: quit\n");
 }
 
-char *load_config(size_t *config_len) {
-    char *home, *config;
-    struct stat s;
+buf *load_config(void) {
+    char *home, cursor[1024];
     int fd;
+    buf *b;
+    ssize_t len;
+
+    b = alloc_buf();
 
     home = getenv("HOME");
     if (home == NULL) {
@@ -47,30 +52,24 @@ char *load_config(size_t *config_len) {
 	die();
     }
 
-    if (fstat(fd, &s) == -1) {
-	printf("TODO fstat %m\n");
-	die();
+    while (1) {
+        len = read(fd, cursor, sizeof(*cursor));
+        if (len < 0) {
+            printf("TODO read %m\n");
+            die();
+        } else if (len == 0) {
+            break;
+        }
+        write_bytes(b, cursor, len);
     }
+    close(fd);
 
-    config = malloc(*config_len);
-    if (config == NULL) {
-	printf("TODO malloc %m\n");
-	die();
-    }
-
-    if (s.st_size > 0 && read(fd, config, s.st_size) != s.st_size) {
-	printf("TODO read %m\n");
-	die();
-    }
-    config[s.st_size] = '\0';
-
-    *config_len = s.st_size + 1;
-    return config;
+    return b;
 }
 
 int main() {
-    char cmd, *config = NULL, *cursor, *line_end;
-    size_t config_len;
+    char cmd, *cursor, *line_end;
+    buf *config;
 
     /* Disable canonical mode, etc. so we don't wait for newlines. */
     if (tcgetattr(0, &t)) {
@@ -97,14 +96,10 @@ int main() {
             help();
 	} else if (cmd == 'l') {
 	    if (config == NULL) {
-		config = load_config(&config_len);
-		if (config == NULL) {
-		    printf("TODO\n");
-		    die();
-		}
+		config = load_config();
 	    }
 
-	    cursor = config;
+	    cursor = config->bytes;
 	    while (1) {
 		line_end = strchr(cursor, '\n');
 		if (line_end == NULL) {
