@@ -38,18 +38,18 @@ buf *load_config(void) {
 
     home = getenv("HOME");
     if (home == NULL) {
-	printf("TODO getenv\n");
-	die();
+        printf("TODO getenv\n");
+        die();
     }
     if (chdir(home) == -1) {
-	printf("TODO chdir\n");
-	die();
+        printf("TODO chdir\n");
+        die();
     }
 
     fd = open(".podcasts", O_CREAT | O_RDONLY, 0600);
     if (fd == -1) {
-	printf("TODO open %m\n");
-	die();
+        printf("TODO open %m\n");
+        die();
     }
 
     while (1) {
@@ -60,7 +60,7 @@ buf *load_config(void) {
         } else if (len == 0) {
             break;
         }
-        write_bytes(b, cursor, len);
+        append_bytes(b, cursor, len);
     }
     close(fd);
 
@@ -68,8 +68,10 @@ buf *load_config(void) {
 }
 
 int main() {
-    char cmd, *cursor, *line_end;
-    buf *config;
+    char cmd;
+    const char *line;
+    buf *config = NULL;
+    size_t line_len;
 
     /* Disable canonical mode, etc. so we don't wait for newlines. */
     if (tcgetattr(0, &t)) {
@@ -94,23 +96,20 @@ int main() {
             die();
         } else if (cmd == 'h') {
             help();
-	} else if (cmd == 'l') {
-	    if (config == NULL) {
-		config = load_config();
-	    }
+        } else if (cmd == 'l') {
+            if (config == NULL) {
+                config = load_config();
+            }
 
-	    cursor = config->bytes;
-	    while (1) {
-		line_end = strchr(cursor, '\n');
-		if (line_end == NULL) {
-		    break;
-		}
-		line_end++;
-		if (cursor[0] == 'n' || cursor[0] == 'u') {
-		    printf("%.*s", line_end - cursor, cursor);
-		}
-		cursor = line_end;
-	    }
+            while (1) {
+                line = yield_line(config, &line_len);
+                if (line == NULL) {
+                    break;
+                }
+                if (line[0] == 'n' || line[0] == 'u') {
+                    printf("%.*s\n", line_len, line);
+                }
+            }
         } else {
             printf("command not recognized! Valid commands:\n");
             help();

@@ -12,6 +12,15 @@
     printf("Error: buf.c line %d: %m\n", __LINE__);	\
     exit(1);
 
+struct buf {
+    char *bytes;
+
+    size_t bytes_capacity;
+    size_t bytes_written;
+
+    size_t cursor_offset;
+};
+
 buf *alloc_buf(void) {
     buf *b;
 
@@ -28,6 +37,7 @@ buf *alloc_buf(void) {
     b->bytes[0] = '\0';
     b->bytes_capacity = INCREMENT;
     b->bytes_written = 0;
+    b->cursor_offset = 0;
     return b;
 }
 
@@ -41,7 +51,7 @@ void free_buf(buf **bp) {
     *bp = NULL;
 }
 
-void write_bytes(buf *b, const char *data, size_t data_len) {
+void append_bytes(buf *b, const char *data, size_t data_len) {
     size_t new_size;
     char *new_buf;
 
@@ -60,6 +70,29 @@ void write_bytes(buf *b, const char *data, size_t data_len) {
     memcpy(b->bytes + b->bytes_written, data, data_len);
     b->bytes_written += data_len;
     b->bytes[b->bytes_written] = '\0';
+}
+
+const char *yield_line(buf *b, size_t *line_len_out) {
+    char *end, *ret;
+
+    if (b->cursor_offset == b->bytes_written) {
+	*line_len_out = 0;
+	return NULL;
+    }
+
+    ret = b->bytes + b->cursor_offset;
+    end = strchr(b->bytes + b->cursor_offset, '\n');
+    if (end == NULL) {
+	end = b->bytes + b->bytes_written;
+    }
+
+    *line_len_out = end - ret;
+    if (end != b->bytes + b->bytes_written) {
+	/* skip newline */
+	end += 1;
+    }
+    b->cursor_offset += end - ret;
+    return ret;
 }
 
 /* Local variables: */
