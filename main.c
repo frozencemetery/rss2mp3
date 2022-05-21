@@ -3,12 +3,9 @@
 /* For getline(). */
 #define _POSIX_C_SOURCE 200809L
 
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -35,12 +32,7 @@ void help(void) {
 }
 
 buf *load_config(void) {
-    char *home, cursor[1024];
-    int fd;
-    buf *b;
-    ssize_t len;
-
-    b = alloc_buf();
+    char *home;
 
     home = getenv("HOME");
     if (home == NULL) {
@@ -52,25 +44,7 @@ buf *load_config(void) {
         die();
     }
 
-    fd = open(CONFIG_FILE, O_CREAT | O_RDONLY, 0600);
-    if (fd == -1) {
-        printf("TODO open %m\n");
-        die();
-    }
-
-    while (1) {
-        len = read(fd, cursor, sizeof(*cursor));
-        if (len < 0) {
-            printf("TODO read %m\n");
-            die();
-        } else if (len == 0) {
-            break;
-        }
-        append_bytes(b, cursor, len);
-    }
-    close(fd);
-
-    return b;
+    return new_from_file(CONFIG_FILE);
 }
 
 int main() {
@@ -135,7 +109,8 @@ int main() {
                 printf("TODO you're bad at this\n");
                 die();
             } else if (url_len < 12 || /* http://a is valid... but no. */
-                       (strcmp(url, "https://") && strcmp(url, "http://"))) {
+                       (strncmp(url, "https://", 8) &&
+                        strncmp(url, "http://", 7))) {
                 printf("TODO invalid URL\n");
                 die();
             }

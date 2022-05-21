@@ -15,6 +15,8 @@
     printf("Error: buf.c line %d: %m\n", __LINE__);	\
     exit(1);
 
+#define ROUND_UP(len) (((len - 1) / INCREMENT + 1) * INCREMENT)
+
 struct buf {
     char *bytes;
 
@@ -23,26 +25,6 @@ struct buf {
 
     size_t cursor_offset;
 };
-
-buf *alloc_buf(void) {
-    buf *b;
-
-    b = malloc(sizeof(*b));
-    if (b == NULL) {
-	DIE;
-    }
-
-    b->bytes = malloc(INCREMENT);
-    if (b->bytes == NULL) {
-	DIE;
-    }
-
-    b->bytes[0] = '\0';
-    b->bytes_capacity = INCREMENT;
-    b->bytes_written = 0;
-    b->cursor_offset = 0;
-    return b;
-}
 
 void free_buf(buf **bp) {
     if (bp == NULL) {
@@ -70,15 +52,50 @@ void flush_to_file(buf *b, const char *path) {
     close(fd);
 }
 
+buf *new_from_file(const char *path) {
+    buf *b;
+    int fd;
+    struct stat s;
+    size_t new_size;
+    ssize_t len;
+
+    b = calloc(1, sizeof(*b));
+    if (b == NULL) {
+	DIE;
+    }
+
+    fd = open(path, O_CREAT | O_RDONLY, 0600);
+    if (fd == -1) {
+	DIE;
+    }
+
+    if (fstat(fd, &s) < 0) {
+	DIE;
+    }
+
+    b->bytes_written = s.st_size;
+    new_size = ROUND_UP(s.st_size + 1);
+    b->bytes = malloc(new_size);
+    if (b->bytes == NULL) {
+	DIE;
+    }
+    b->bytes_capacity = new_size;
+
+    len = read(fd, b->bytes, s.st_size);
+    if (len != s.st_size) {
+	DIE;
+    }
+    b->bytes[b->bytes_written] = '\0';
+    close(fd);
+    return b;
+}
+
 void append_bytes(buf *b, const char *data, size_t data_len) {
     size_t new_size;
     char *new_buf;
 
     if (b->bytes_written + data_len + 1 >= b->bytes_capacity) {
-	new_size = b->bytes_written + data_len + 1;
-	if (new_size % INCREMENT) {
-	    new_size = (new_size / INCREMENT + 1) * INCREMENT;
-	}
+	new_size = ROUND_UP(b->bytes_written + data_len + 1);
 	new_buf = realloc(b->bytes, new_size);
 	if (new_buf == NULL) {
 	    free_buf(&b);
