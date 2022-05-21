@@ -12,11 +12,19 @@ if [ x"$CC" = x ]; then
     exit 1
 fi
 
-CFLAGS="-O2 -fstack-protector-strong -Wformat -Werror=format-security $CFLAGS"
+GCFLAGS="-O2"
+GDB=""
+if [ "x$1" = "x-g" ]; then
+    shift
+    GDB="gdb --args"
+    GCFLAGS="-Og -ggdb"
+fi
+
+CFLAGS="-fstack-protector-strong -Wformat -Werror=format-security $CFLAGS"
 CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2 $CPPFLAGS"
 LDFLAGS="-Wl,-z,relro $LDFLAGS"
 
 set -x
-$CC -std=c11 -Wall -Wextra -Werror -g $CPPFLAGS $CFLAGS $LDFLAGS \
+$CC -std=c11 -Wall -Wextra -Werror $GCFLAGS $CPPFLAGS $CFLAGS $LDFLAGS \
     -o main main.c buf.c
-exec ./main
+exec $GDB ./main $@
