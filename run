@@ -25,6 +25,8 @@ CPPFLAGS="-Wdate-time -D_FORTIFY_SOURCE=2 $CPPFLAGS"
 LDFLAGS="-Wl,-z,relro $LDFLAGS"
 
 set -x
+CURL_FLAGS=$(pkg-config --cflags --libs libcurl)
+XML_FLAGS=$(pkg-config --cflags --libs libxml-2.0)
 $CC -std=c11 -Wall -Wextra -Werror $GCFLAGS $CPPFLAGS $CFLAGS $LDFLAGS \
-    -o main main.c buf.c
+    $CURL_FLAGS $XML_FLAGS -o main main.c buf.c
 exec $GDB ./main $@
