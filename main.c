@@ -236,6 +236,7 @@ static void update_feeds(void) {
         sanitize(title);
         process_items(fctx, title);
         feed_free(title);
+        unload_feed(fctx);
     }
     reset_cursor(feeds);
 }
