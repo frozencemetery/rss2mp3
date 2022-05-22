@@ -153,6 +153,10 @@ const char *yield_line(buf *b, size_t *line_len_out) {
     return ret;
 }
 
+void reset_cursor(buf *b) {
+    b->cursor_offset = 0;
+}
+
 /* Local variables: */
 /* c-basic-offset: 4 */
 /* indent-tabs-mode: nil */

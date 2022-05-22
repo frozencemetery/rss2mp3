@@ -141,6 +141,7 @@ int main() {
                     printf("%.*s\n", line_len, line);
                 }
             }
+            reset_cursor(config);
         } else {
             printf("command not recognized! Valid commands:\n");
             help();

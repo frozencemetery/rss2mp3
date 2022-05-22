@@ -13,6 +13,7 @@ char *destruct_buf(buf **bp);
 void flush_to_file(buf *b, const char *path);
 void append_bytes(buf *b, const char *data, size_t data_len);
 const char *yield_line(buf *b, size_t *line_len_out);
+void reset_cursor(buf *b);
 
 /* Local variables: */
 /* c-basic-offset: 4 */
