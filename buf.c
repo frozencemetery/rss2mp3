@@ -29,7 +29,7 @@ struct buf {
 char *destruct_buf(buf **bp) {
     char *ret;
 
-    if (bp == NULL) {
+    if (bp == NULL || *bp == NULL) {
 	return NULL;
     }
 
