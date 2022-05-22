@@ -26,14 +26,19 @@ struct buf {
     size_t cursor_offset;
 };
 
-void free_buf(buf **bp) {
+char *destruct_buf(buf **bp) {
+    char *ret;
+
     if (bp == NULL) {
-	return;
+	return NULL;
     }
 
-    free((*bp)->bytes);
+    ret = (*bp)->bytes;
+
     free(*bp);
     *bp = NULL;
+
+    return ret;
 }
 
 void flush_to_file(buf *b, const char *path) {
@@ -50,6 +55,24 @@ void flush_to_file(buf *b, const char *path) {
 	DIE;
     }
     close(fd);
+}
+
+buf *new_buf(void) {
+    buf *b;
+
+    b = calloc(1, sizeof(*b));
+    if (b == NULL) {
+	DIE;
+    }
+
+    b->bytes = malloc(INCREMENT);
+    if (b->bytes == NULL) {
+	DIE;
+    }
+    b->bytes_capacity = INCREMENT;
+    b->bytes[0] = '\0';
+
+    return b;
 }
 
 buf *new_from_file(const char *path) {
@@ -98,7 +121,6 @@ void append_bytes(buf *b, const char *data, size_t data_len) {
 	new_size = ROUND_UP(b->bytes_written + data_len + 1);
 	new_buf = realloc(b->bytes, new_size);
 	if (new_buf == NULL) {
-	    free_buf(&b);
 	    DIE;
 	}
 	b->bytes = new_buf;
