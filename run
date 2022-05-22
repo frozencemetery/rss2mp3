@@ -28,5 +28,5 @@ set -x
 CURL_FLAGS=$(pkg-config --cflags --libs libcurl)
 XML_FLAGS=$(pkg-config --cflags --libs libxml-2.0)
 $CC -std=c11 -Wall -Wextra -Werror $GCFLAGS $CPPFLAGS $CFLAGS $LDFLAGS \
-    $CURL_FLAGS $XML_FLAGS -o main main.c buf.c
+    $CURL_FLAGS $XML_FLAGS -o main main.c buf.c dl.c feed.c
 exec $GDB ./main $@
