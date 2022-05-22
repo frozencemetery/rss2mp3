@@ -11,13 +11,6 @@
         exit(1);                                        \
     }
 
-CURL *curl;
-
-static void free_curl(void) {
-    curl_easy_cleanup(curl);
-    curl = NULL;
-}
-
 static size_t file_write_callback(char *ptr, size_t size, size_t nmemb,
                                   void *userdata) {
     FILE *f = userdata;
@@ -33,22 +26,25 @@ static size_t buf_write_callback(char *ptr, size_t size, size_t nmemb,
 
 static inline void dl(const char *url, void *write_callback,
                       void *write_data) {
-    if (curl == NULL) {
-        (void)curl_global_init(CURL_GLOBAL_DEFAULT);
-        curl = curl_easy_init();
-        assert(curl);
-        atexit(free_curl);
+    CURL *curl;
 
-        /* This interface is needlessly confusing... it exposes an option to
-         * turn it off, which we need to turn off, otherwise it defaults
-         * being off, which is off. */
-        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
-    }
+    curl = curl_easy_init();
+    assert(curl);
+
+    /* This interface is needlessly confusing... it exposes an option to
+     * turn it off, which we need to turn off, otherwise it defaults
+     * being off, which is off. */
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
+
+    /* This one is another awful default. */
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)write_data);
+
     assert(!curl_easy_perform(curl));
+    curl_easy_cleanup(curl);
 }
 
 void dl_to_file(const char *url, const char *path) {

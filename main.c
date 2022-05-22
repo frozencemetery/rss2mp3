@@ -165,22 +165,27 @@ static void record_guid(char *guid) {
     flush_to_file(guids, GUIDS_FILE);
 }
 
-static void download_item(const char *feed_name, char *title, char *url) {
+static void chdir_p(const char *dir) {
     struct stat s;
+    int ret;
+
+    ret = stat(dir, &s);
+    if (ret && errno == ENOENT) {
+        mkdir(dir, 0770);
+    }
+    ret = chdir(dir);
+    if (ret) {
+        die("TODO chdir %m\n");
+    }
+}
+
+static void download_item(const char *feed_name, char *title, char *url) {
     int ret;
     char *filename;
     size_t filename_len;
 
-    ret = stat(feed_name, &s);
-    if (ret && errno == ENOENT) {
-        mkdir(feed_name, 0770);
-    } else if (ret) {
-        die("TODO stat %m\n");
-    }
-    ret = chdir(feed_name);
-    if (ret) {
-        die("TODO chdir %m\n");
-    }
+    chdir_p("Podcasts");
+    chdir_p(feed_name);
 
     sanitize(title);
     filename_len = strlen(title) + strlen(".mp3");
@@ -192,10 +197,11 @@ static void download_item(const char *feed_name, char *title, char *url) {
     memcpy(filename + strlen(title), ".mp3", strlen(".mp3"));
     filename[filename_len] = '\0';
 
-    dl_to_file(url, title);
+    printf("url: %s\n", url);
+    dl_to_file(url, filename);
     free(filename);
 
-    ret = chdir("..");
+    ret = chdir("../..");
     if (ret) {
         die("TODO chdir %m\n");
     }
