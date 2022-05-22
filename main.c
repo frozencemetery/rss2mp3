@@ -65,7 +65,7 @@ static void chdir_p(const char *dir) {
     }
     ret = chdir(dir);
     if (ret) {
-        die("TODO chdir %m\n");
+        die("error: chdir: %m\n");
     }
 }
 
@@ -75,15 +75,15 @@ static void load_configs(void) {
 
     home = getenv("HOME");
     if (home == NULL) {
-        die("TODO getenv\n");
+        die("error: getenv(HOME) returned NULL\n");
     }
     if (chdir(home) == -1) {
-        die("TODO chdir %m\n");
+        die("error: chdir(home): %m\n");
     }
     chdir_p(CONFIG_DIR);
     ret = chdir("..");
     if (ret) {
-        die("TODO chdir %m\n");
+        die("error: chdir(..): %m\n");
     }
 
     feeds = new_from_file(FEEDS_FILE);
@@ -148,7 +148,7 @@ static void download_item(const char *feed_name, char *title, char *url) {
     filename_len = strlen(title) + strlen(".mp3");
     filename = malloc(filename_len + 1);
     if (!filename) {
-        die("TODO malloc %m\n");
+        die("error: malloc: %m\n");
     }
     memcpy(filename, title, strlen(title));
     memcpy(filename + strlen(title), ".mp3", strlen(".mp3"));
@@ -160,7 +160,7 @@ static void download_item(const char *feed_name, char *title, char *url) {
 
     ret = chdir("../..");
     if (ret) {
-        die("TODO chdir %m\n");
+        die("error: chdir(../..); %m\n");
     }
 }
 
@@ -225,19 +225,13 @@ static void update_feeds(void) {
     while ((line = yield_line(feeds, &line_len))) {
         url = strndup(line, line_len);
         if (!url) {
-            die("TODO strndup %m\n");
+            die("error: strndup(line): %m\n");
         }
 
         feed_raw = dl_to_buf(url);
         free(url);
-        if (!feed_raw) {
-            die("TODO dl error\n");
-        }
 
         fctx = load_feed(feed_raw, &title);
-        if (!fctx) {
-            die("TODO load_feed error\n");
-        }
         printf("Processing %s...\n", title);
         sanitize(title);
         process_items(fctx, title);
@@ -260,26 +254,20 @@ static void add_url(void) {
     discard = 0;
     url_len = getline(&url, &discard, stdin);
     if (url_len < 0) {
-        die("TODO getline %m\n");
+        die("error: getline empty: %m\n");
     } else if (url_len == 0) {
-        die("TODO you're bad at this\n");
+        die("error: getline empty\n");
     } else if (url_len < 12 || /* http://a is valid... but no. */
                (strncmp(url, "https://", 8) && strncmp(url, "http://", 7))) {
-        die("TODO invalid URL\n");
+        die("error: invalid URL (maybe include the https:// bit?)\n");
     }
     while (url[url_len - 1] == '\n') {
         url[--url_len] = '\0';
     }
 
     feed_buf = dl_to_buf(url);
-    if (!feed_buf) {
-        die("TODO no download?\n");
-    }
 
     fctx = load_feed(feed_buf, &name);
-    if (!fctx) {
-        die("TODO no parse?\n");
-    }
 
     append_bytes(feeds, url, url_len);
     append_bytes(feeds, "\n", 1);

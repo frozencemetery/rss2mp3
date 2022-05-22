@@ -62,8 +62,6 @@ buf *dl_to_buf(const char *url) {
     buf *b;
 
     b = new_buf();
-    assert(b);
-
     dl(url, buf_write_callback, b);
     return b;
 }
