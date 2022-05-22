@@ -16,8 +16,9 @@
 #include "dl.h"
 #include "feed.h"
 
-#define FEEDS_FILE ".podcasts"
-#define GUIDS_FILE ".guids"
+#define CONFIG_DIR ".rss2mp3"
+#define FEEDS_FILE CONFIG_DIR "/podcasts"
+#define GUIDS_FILE CONFIG_DIR "/guids"
 
 struct termios t;
 buf *feeds;
@@ -54,14 +55,34 @@ static void help(void) {
     printf("- q: quit\n");
 }
 
+static void chdir_p(const char *dir) {
+    struct stat s;
+    int ret;
+
+    ret = stat(dir, &s);
+    if (ret && errno == ENOENT) {
+        mkdir(dir, 0770);
+    }
+    ret = chdir(dir);
+    if (ret) {
+        die("TODO chdir %m\n");
+    }
+}
+
 static void load_configs(void) {
     char *home;
+    int ret;
 
     home = getenv("HOME");
     if (home == NULL) {
         die("TODO getenv\n");
     }
     if (chdir(home) == -1) {
+        die("TODO chdir %m\n");
+    }
+    chdir_p(CONFIG_DIR);
+    ret = chdir("..");
+    if (ret) {
         die("TODO chdir %m\n");
     }
 
@@ -113,20 +134,6 @@ static void record_guid(char *guid) {
     append_bytes(guids, guid, strlen(guid));
     append_bytes(guids, "\n", 1);
     flush_to_file(guids, GUIDS_FILE);
-}
-
-static void chdir_p(const char *dir) {
-    struct stat s;
-    int ret;
-
-    ret = stat(dir, &s);
-    if (ret && errno == ENOENT) {
-        mkdir(dir, 0770);
-    }
-    ret = chdir(dir);
-    if (ret) {
-        die("TODO chdir %m\n");
-    }
 }
 
 static void download_item(const char *feed_name, char *title, char *url) {
