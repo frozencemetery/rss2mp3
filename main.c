@@ -16,11 +16,11 @@
 #include "dl.h"
 #include "feed.h"
 
-#define CONFIG_FILE ".podcasts"
+#define FEEDS_FILE ".podcasts"
 #define GUIDS_FILE ".guids"
 
 struct termios t;
-buf *config;
+buf *feeds;
 buf *guids;
 
 static void cleanup(void) {
@@ -30,7 +30,7 @@ static void cleanup(void) {
     t.c_lflag |= ICANON;
     tcsetattr(0, TCSANOW, &t);
 
-    buffer = destruct_buf(&config);
+    buffer = destruct_buf(&feeds);
     free(buffer);
 
     buffer = destruct_buf(&guids);
@@ -57,10 +57,6 @@ static void help(void) {
 static void load_configs(void) {
     char *home;
 
-    if (config) {
-        return;
-    }
-
     home = getenv("HOME");
     if (home == NULL) {
         die("TODO getenv\n");
@@ -69,7 +65,7 @@ static void load_configs(void) {
         die("TODO chdir %m\n");
     }
 
-    config = new_from_file(CONFIG_FILE);
+    feeds = new_from_file(FEEDS_FILE);
     guids = new_from_file(GUIDS_FILE);
 }
 
@@ -91,52 +87,6 @@ static void sanitize(char *s) {
         }
         s[i] = '_';
     }
-}
-
-static void add_url(void) {
-    char *name, *url;
-    size_t discard;
-    ssize_t url_len;
-    buf *feed_buf;
-    feed_context *fctx;
-
-    printf("URL: ");
-    fflush(stdout);
-
-    url = NULL;
-    discard = 0;
-    url_len = getline(&url, &discard, stdin);
-    if (url_len < 0) {
-        die("TODO getline %m\n");
-    } else if (url_len == 0) {
-        die("TODO you're bad at this\n");
-    } else if (url_len < 12 || /* http://a is valid... but no. */
-               (strncmp(url, "https://", 8) && strncmp(url, "http://", 7))) {
-        die("TODO invalid URL\n");
-    }
-    while (url[url_len - 1] == '\n') {
-        url[--url_len] = '\0';
-    }
-
-    feed_buf = dl_to_buf(url);
-    if (!feed_buf) {
-        die("TODO no download?\n");
-    }
-
-    fctx = load_feed(feed_buf, &name);
-    if (!fctx) {
-        die("TODO no parse?\n");
-    }
-
-    append_bytes(config, "n: ", 3);
-    append_bytes(config, name, strlen(name));
-    append_bytes(config, "\nu: ", 4);
-    append_bytes(config, url, url_len);
-    append_bytes(config, "\n", 1);
-    feed_free(name);
-    free(url);
-    flush_to_file(config, CONFIG_FILE);
-    unload_feed(fctx);
 }
 
 static bool seen_guid(char *guid) {
@@ -265,12 +215,8 @@ static void update_feeds(void) {
     buf *feed_raw;
     feed_context *fctx;
 
-    while ((line = yield_line(config, &line_len))) {
-        if (line[0] != 'u') {
-            continue;
-        }
-
-        url = strndup(line + strlen("u: "), line_len - strlen("u: "));
+    while ((line = yield_line(feeds, &line_len))) {
+        url = strndup(line, line_len);
         if (!url) {
             die("TODO strndup %m\n");
         }
@@ -290,7 +236,52 @@ static void update_feeds(void) {
         process_items(fctx, title);
         feed_free(title);
     }
-    reset_cursor(config);
+    reset_cursor(feeds);
+}
+
+static void add_url(void) {
+    char *name, *url;
+    size_t discard;
+    ssize_t url_len;
+    buf *feed_buf;
+    feed_context *fctx;
+
+    printf("URL: ");
+    fflush(stdout);
+
+    url = NULL;
+    discard = 0;
+    url_len = getline(&url, &discard, stdin);
+    if (url_len < 0) {
+        die("TODO getline %m\n");
+    } else if (url_len == 0) {
+        die("TODO you're bad at this\n");
+    } else if (url_len < 12 || /* http://a is valid... but no. */
+               (strncmp(url, "https://", 8) && strncmp(url, "http://", 7))) {
+        die("TODO invalid URL\n");
+    }
+    while (url[url_len - 1] == '\n') {
+        url[--url_len] = '\0';
+    }
+
+    feed_buf = dl_to_buf(url);
+    if (!feed_buf) {
+        die("TODO no download?\n");
+    }
+
+    fctx = load_feed(feed_buf, &name);
+    if (!fctx) {
+        die("TODO no parse?\n");
+    }
+
+    append_bytes(feeds, url, url_len);
+    append_bytes(feeds, "\n", 1);
+    free(url);
+    flush_to_file(feeds, FEEDS_FILE);
+
+    process_items(fctx, name);
+    feed_free(name);
+    unload_feed(fctx);
 }
 
 int main() {
@@ -327,15 +318,13 @@ int main() {
             add_url();
         } else if (cmd == 'l') {
             while (1) {
-                line = yield_line(config, &line_len);
+                line = yield_line(feeds, &line_len);
                 if (line == NULL) {
                     break;
                 }
-                if (line[0] == 'n' || line[0] == 'u') {
-                    printf("%.*s\n", line_len, line);
-                }
+                printf("%.*s\n", line_len, line);
             }
-            reset_cursor(config);
+            reset_cursor(feeds);
         } else if (cmd == 'u') {
             update_feeds();
         } else {
