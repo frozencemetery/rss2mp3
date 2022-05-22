@@ -6,7 +6,7 @@
 #include <stdlib.h>
 
 #define assert(cond) \
-    if (cond) {                                         \
+    if (!(cond)) {                                      \
         printf("Error: dl.c line %d\n", __LINE__);      \
         exit(1);                                        \
     }

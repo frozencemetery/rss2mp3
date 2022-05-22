@@ -19,6 +19,17 @@ struct feed_context {
     xmlNode *cur;
 };
 
+void unload_feed(feed_context *ctx) {
+    if (!ctx) {
+        return;
+    }
+    xmlFreeDoc(ctx->doc);
+}
+
+void feed_free(void *p) {
+    xmlFree(p);
+}
+
 feed_context *load_feed(buf *raw_xml, char **title_out) {
     feed_context *ctx;
     xmlDoc *doc;
