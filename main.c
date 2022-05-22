@@ -14,34 +14,44 @@
 #define CONFIG_FILE ".podcasts"
 
 struct termios t;
+buf *config;
 
-_Noreturn void die(void) {
+static void cleanup(void) {
+    char *buffer;
+
     /* Re-enable canoncal mode. */
     t.c_lflag |= ICANON;
     tcsetattr(0, TCSANOW, &t);
 
-    printf("see you in the next one...\n");
-    exit(0);
+    buffer = destruct_buf(&config);
+    free(buffer);
 }
 
-void help(void) {
+static _Noreturn void die(char *fmt, ...) {
+    va_list ap;
+
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    exit(1);
+}
+
+static void help(void) {
     printf("- h: help (this text)\n");
     printf("- a: add a feed\n");
     printf("- l: list feeds\n");
     printf("- q: quit\n");
 }
 
-buf *load_config(void) {
+static buf *load_config(void) {
     char *home;
 
     home = getenv("HOME");
     if (home == NULL) {
-        printf("TODO getenv\n");
-        die();
+        die("TODO getenv\n");
     }
     if (chdir(home) == -1) {
-        printf("TODO chdir\n");
-        die();
+        die("TODO chdir %m\n");
     }
 
     return new_from_file(CONFIG_FILE);
@@ -50,22 +60,21 @@ buf *load_config(void) {
 int main() {
     char cmd, *name, *url;
     const char *line;
-    buf *config = NULL;
     size_t line_len, discard;
     ssize_t name_len, url_len;
 
     /* Disable canonical mode, etc. so we don't wait for newlines. */
     if (tcgetattr(0, &t)) {
-        printf("tcgetattr: %m\n");
-        exit(1);
+        die("tcgetattr: %m\n");
     }
     t.c_lflag &= ~ICANON;
     t.c_cc[VMIN] = 1;
     t.c_cc[VTIME] = 0;
     if (tcsetattr(0, TCSANOW, &t)) {
-        printf("tcsetattr: %m\n");
-        exit(1);
+        die("tcsetattr: %m\n");
     }
+
+    atexit(cleanup);
 
     while (1) {
         printf("[h for help] ");
@@ -74,7 +83,8 @@ int main() {
         cmd = getchar();
         printf("\n");
         if (cmd == '\0' || cmd == 'q') {
-            die();
+            printf("see you in the next one...\n");
+            exit(0);
         } else if (cmd == 'h') {
             help();
         } else if (cmd == 'a') {
@@ -89,11 +99,9 @@ int main() {
             discard = 0;
             name_len = getline(&name, &discard, stdin);
             if (name_len < 0) {
-                printf("TODO getline %m\n");
-                die();
+                die("TODO getline %m\n");
             } else if (name_len == 0) {
-                printf("TODO you're bad at this\n");
-                die();
+                die("TODO you're bad at this\n");
             }
 
             printf("URL: ");
@@ -103,16 +111,13 @@ int main() {
             discard = 0;
             url_len = getline(&url, &discard, stdin);
             if (url_len < 0) {
-                printf("TODO getline %m\n");
-                die();
+                die("TODO getline %m\n");
             } else if (url_len == 0) {
-                printf("TODO you're bad at this\n");
-                die();
+                die("TODO you're bad at this\n");
             } else if (url_len < 12 || /* http://a is valid... but no. */
                        (strncmp(url, "https://", 8) &&
                         strncmp(url, "http://", 7))) {
-                printf("TODO invalid URL\n");
-                die();
+                die("TODO invalid URL\n");
             }
 
             append_bytes(config, "n: ", 3);
@@ -143,7 +148,8 @@ int main() {
     }
 
     free(config);
-    die();
+    printf("see you in the next one...\n");;
+    return 0;
 }
 
 /* Local variables: */
