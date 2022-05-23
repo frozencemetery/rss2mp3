@@ -217,12 +217,25 @@ static void process_items(feed_context *fctx, const char *feed_name) {
 
 static void update_feeds(void) {
     const char *line;
-    char *url, *title;
+    char *url, *title, cmd;
     size_t line_len;
     buf *feed_raw;
     feed_context *fctx;
 
     while ((line = yield_line(feeds, &line_len))) {
+        /* This is terrible UI, and it's really unfortunate.  However, some
+         * hosts are *really* slow (and in one case, also serve gigantic
+         * feeds).  Ask the user many questions, as else we'll be waiting all
+         * day. */
+        printf("Next: %.*s\n", line_len, line);
+        printf("(press s to skip, or any other key to update feed) ");
+        fflush(stdout);
+        cmd = getchar();
+        printf("\n");
+        if (cmd == 's') {
+            continue;
+        }
+
         url = strndup(line, line_len);
         if (!url) {
             die("error: strndup(line): %m\n");
