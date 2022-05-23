@@ -20,6 +20,11 @@
 #define FEEDS_FILE CONFIG_DIR "/podcasts"
 #define GUIDS_FILE CONFIG_DIR "/guids"
 
+/* Due to symlinks, pretty much all directory traversal up (e.g., chdir(..))
+ * needs to be avoided.  Cache home and start over every time we care where we
+ * are using chdir_p() below. */
+char *home;
+
 struct termios t;
 buf *feeds;
 buf *guids;
@@ -70,21 +75,13 @@ static void chdir_p(const char *dir) {
 }
 
 static void load_configs(void) {
-    char *home;
-    int ret;
-
     home = getenv("HOME");
     if (home == NULL) {
         die("error: getenv(HOME) returned NULL\n");
     }
-    if (chdir(home) == -1) {
-        die("error: chdir(home): %s\n", strerror(errno));
-    }
+    chdir_p(home);
     chdir_p(CONFIG_DIR);
-    ret = chdir("..");
-    if (ret) {
-        die("error: chdir(..): %s\n", strerror(errno));
-    }
+    chdir_p(home);
 
     feeds = new_from_file(FEEDS_FILE);
     guids = new_from_file(GUIDS_FILE);
@@ -137,7 +134,6 @@ static void record_guid(char *guid) {
 }
 
 static void download_item(const char *feed_name, char *title, char *url) {
-    int ret;
     char *filename;
     size_t filename_len;
 
@@ -158,10 +154,7 @@ static void download_item(const char *feed_name, char *title, char *url) {
     dl_to_file(url, filename);
     free(filename);
 
-    ret = chdir("../..");
-    if (ret) {
-        die("error: chdir(../..); %s\n", strerror(errno));
-    }
+    chdir_p(home);
 }
 
 static void dl_help(void) {
