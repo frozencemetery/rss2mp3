@@ -2,6 +2,7 @@
 
 #include "buf.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,8 +12,8 @@
 
 #define INCREMENT 128
 
-#define DIE						\
-    printf("Error: buf.c line %d: %m\n", __LINE__);	\
+#define DIE                                                             \
+    printf("Error: buf.c line %d: %s\n", __LINE__, strerror(errno));	\
     exit(1);
 
 #define ROUND_UP(len) (((len - 1) / INCREMENT + 1) * INCREMENT)

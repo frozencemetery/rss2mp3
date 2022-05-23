@@ -65,7 +65,7 @@ static void chdir_p(const char *dir) {
     }
     ret = chdir(dir);
     if (ret) {
-        die("error: chdir: %m\n");
+        die("error: chdir: %s\n", strerror(errno));
     }
 }
 
@@ -78,12 +78,12 @@ static void load_configs(void) {
         die("error: getenv(HOME) returned NULL\n");
     }
     if (chdir(home) == -1) {
-        die("error: chdir(home): %m\n");
+        die("error: chdir(home): %s\n", strerror(errno));
     }
     chdir_p(CONFIG_DIR);
     ret = chdir("..");
     if (ret) {
-        die("error: chdir(..): %m\n");
+        die("error: chdir(..): %s\n", strerror(errno));
     }
 
     feeds = new_from_file(FEEDS_FILE);
@@ -148,7 +148,7 @@ static void download_item(const char *feed_name, char *title, char *url) {
     filename_len = strlen(title) + strlen(".mp3");
     filename = malloc(filename_len + 1);
     if (!filename) {
-        die("error: malloc: %m\n");
+        die("error: malloc: %s\n", strerror(errno));
     }
     memcpy(filename, title, strlen(title));
     memcpy(filename + strlen(title), ".mp3", strlen(".mp3"));
@@ -160,7 +160,7 @@ static void download_item(const char *feed_name, char *title, char *url) {
 
     ret = chdir("../..");
     if (ret) {
-        die("error: chdir(../..); %m\n");
+        die("error: chdir(../..); %s\n", strerror(errno));
     }
 }
 
@@ -238,7 +238,7 @@ static void update_feeds(void) {
 
         url = strndup(line, line_len);
         if (!url) {
-            die("error: strndup(line): %m\n");
+            die("error: strndup(line): %s\n", strerror(errno));
         }
 
         feed_raw = dl_to_buf(url);
@@ -268,7 +268,7 @@ static void add_url(void) {
     discard = 0;
     url_len = getline(&url, &discard, stdin);
     if (url_len < 0) {
-        die("error: getline empty: %m\n");
+        die("error: getline empty: %s\n", strerror(errno));
     } else if (url_len == 0) {
         die("error: getline empty\n");
     } else if (url_len < 12 || /* http://a is valid... but no. */
@@ -300,13 +300,13 @@ int main() {
 
     /* Disable canonical mode, etc. so we don't wait for newlines. */
     if (tcgetattr(0, &t)) {
-        die("tcgetattr: %m\n");
+        die("tcgetattr: %s\n", strerror(errno));
     }
     t.c_lflag &= ~ICANON;
     t.c_cc[VMIN] = 1;
     t.c_cc[VTIME] = 0;
     if (tcsetattr(0, TCSANOW, &t)) {
-        die("tcsetattr: %m\n");
+        die("tcsetattr: %s\n", strerror(errno));
     }
 
     atexit(cleanup);
