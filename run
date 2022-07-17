@@ -17,7 +17,7 @@ GDB=""
 if [ "x$1" = "x-g" ]; then
     shift
     GDB="gdb --args"
-    GCFLAGS="-Og -ggdb"
+    GCFLAGS="-O0 -ggdb"
 fi
 
 CFLAGS="-fstack-protector-strong -Wformat -Werror=format-security $CFLAGS"
