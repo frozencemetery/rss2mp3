@@ -46,7 +46,7 @@ void flush_to_file(buf *b, const char *path) {
     ssize_t ret;
     int fd;
 
-    fd = open(path, O_CREAT | O_WRONLY, 0600);
+    fd = open(path, O_CREAT | O_WRONLY | O_TRUNC, 0600);
     if (fd == -1) {
 	DIE;
     }

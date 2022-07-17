@@ -55,6 +55,7 @@ static _Noreturn void die(char *fmt, ...) {
 static void help(void) {
     printf("- h: help (this text)\n");
     printf("- a: add a feed\n");
+    printf("- d: delete a feed\n");
     printf("- l: list feeds\n");
     printf("- u: update feeds\n");
     printf("- q: quit\n");
@@ -220,7 +221,7 @@ static void update_feeds(void) {
          * hosts are *really* slow (and in one case, also serve gigantic
          * feeds).  Ask the user many questions, as else we'll be waiting all
          * day. */
-        printf("Next: %.*s\n", line_len, line);
+        printf("Next: %.*s\n", (int)line_len, line);
         printf("(press s to skip, or any other key to update feed) ");
         fflush(stdout);
         cmd = getchar();
@@ -260,10 +261,8 @@ static void add_url(void) {
     url = NULL;
     discard = 0;
     url_len = getline(&url, &discard, stdin);
-    if (url_len < 0) {
+    if (url_len <= 0) {
         die("error: getline empty: %s\n", strerror(errno));
-    } else if (url_len == 0) {
-        die("error: getline empty\n");
     } else if (url_len < 12 || /* http://a is valid... but no. */
                (strncmp(url, "https://", 8) && strncmp(url, "http://", 7))) {
         die("error: invalid URL (maybe include the https:// bit?)\n");
@@ -286,10 +285,63 @@ static void add_url(void) {
     unload_feed(fctx);
 }
 
-int main() {
-    char cmd;
+static void list_feeds(void) {
     const char *line;
     size_t line_len;
+
+    for (int i = 0; (line = yield_line(feeds, &line_len)); i++) {
+        if (line == NULL) {
+            break;
+        }
+        printf("%d: %.*s\n", i, (int)line_len, line);
+    }
+    reset_cursor(feeds);
+}
+
+static void delete_url(void) {
+    char *ind;
+    const char *line;
+    ssize_t ind_len;
+    size_t discard, line_len;
+    int del;
+    buf *replacement;
+
+    list_feeds();
+
+    printf("remove (q to cancel) #: ");
+    fflush(stdout);
+    ind_len = getline(&ind, &discard, stdin);
+    while (ind_len > 0 && ind[ind_len - 1] == '\n') {
+        ind_len--;
+    }
+    if (ind_len <= 0) {
+        die("error: getline empty: %s\n", strerror(errno));
+    } else if (ind[0] == 'q') {
+        return;
+    }
+    ind[ind_len] = '\0';
+    del = atoi(ind);
+    if (del < 0) {
+        die("error: negative value - really?\n");
+    }
+
+    replacement = new_buf();
+    for (int i = 0; (line = yield_line(feeds, &line_len)); i++) {
+        if (i == del) {
+            continue;
+        }
+        append_bytes(replacement, line, line_len);
+        append_bytes(replacement, "\n", 1);
+    }
+    destruct_buf(&feeds);
+    feeds = replacement;
+    flush_to_file(feeds, FEEDS_FILE);
+    reset_cursor(feeds);
+}
+
+
+int main() {
+    char cmd;
 
     /* Disable canonical mode, etc. so we don't wait for newlines. */
     if (tcgetattr(0, &t)) {
@@ -318,15 +370,10 @@ int main() {
             help();
         } else if (cmd == 'a') {
             add_url();
+        } else if (cmd == 'd') {
+            delete_url();
         } else if (cmd == 'l') {
-            while (1) {
-                line = yield_line(feeds, &line_len);
-                if (line == NULL) {
-                    break;
-                }
-                printf("%.*s\n", line_len, line);
-            }
-            reset_cursor(feeds);
+            list_feeds();
         } else if (cmd == 'u') {
             update_feeds();
         } else {
