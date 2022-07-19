@@ -12,6 +12,7 @@ $ ./run
 [h for help] h
 - h: help (this text)
 - a: add a feed
+- d: delete a feed
 - l: list feeds
 - u: update feeds
 - q: quit
